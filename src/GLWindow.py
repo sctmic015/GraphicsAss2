@@ -55,25 +55,26 @@ class Cube:
         self.position = np.array(position, dtype=np.float32)
         self.eulers = np.array(eulers, dtype=np.float32)
 
+class Camera:
+    def __init__(self, position):
+
+        self.position = np.array(position, dtype=np.float32)
+        self.update_vectors()
+
+    def update_vectors
+
+
+
 # Used to define Cube objects to be displayed
 class Scene:
     def __init__(self):
 
         # Initial object in scene centered in screen
-        self.cubes = [
-            Cube(
+        self.cube = Cube(
                 position=[0, 0, -10],
                 eulers=[0, 0, 0]
-            ),
-        ]
-
-    # Add secondary object adjacent to initial object
-    def addCube(self):
-        newCube = Cube(
-                position=[-3, 0, -10],
-                eulers=[0, 0, 0]
             )
-        self.cubes.append(newCube)
+
 
 class OpenGLWindow:
 
@@ -98,9 +99,9 @@ class OpenGLWindow:
         return shader
 
     # Initialise
-    def initGL(self, screen_width=960, screen_height=540, addSwitch=False, objectname="cube.obj"):
+    def initGL(self, screen_width=960, screen_height=540, objectname="cube.obj"):
         # Initialise Scene. Has to be here in order for us to reset the scene
-        self.scene = Scene()
+        #self.scene = Scene()
         pg.init()
 
         pg.display.gl_set_attribute(pg.GL_CONTEXT_PROFILE_MASK, pg.GL_CONTEXT_PROFILE_CORE)
@@ -141,9 +142,6 @@ class OpenGLWindow:
         self.cube_load = Geometry(name)
 
         # Used to add an extra object and reset scene
-        if (addSwitch == True):
-            self.scene = Scene()
-            self.scene.addCube()
 
         # Perspective Projection matrix - Gives us our view
         projection_transform = pyrr.matrix44.create_perspective_projection(
@@ -162,91 +160,47 @@ class OpenGLWindow:
         print("Setup complete!")
 
 
-    def render(self, rotate, scale, x, y, z):
+    def render(self, rotate, scale):
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)   # Colour buffer stores all pixels on screen. Colours stored in colour buffer bit
         glUseProgram(self.shader)  # You may not need this line
 
 
-        count = 0   # Used to seperate rotation of cubes
-        for cube in self.scene.cubes:
-            # Start with identity and multiply on progressively
-            # Identity Matrix
-            model_transform = pyrr.matrix44.create_identity(dtype=np.float32)    # Gonna leave this here for now
-            # When count is 0 we are rotating the center object
-            if count == 0:
-                # Eulers used for rotation. Value of rotate used to determine which axis we are rotating on relative to the center object. x, z, y
-                if (rotate >= 0 & rotate <=2):
-                    cube.eulers[rotate] += 0.25
-                    if cube.eulers[rotate] > 360:
-                        cube.eulers[rotate] -= 360
+        # Start with identity and multiply on progressively
+        # Identity Matrix
+        model_transform = pyrr.matrix44.create_identity(dtype=np.float32)    # Gonna leave this here for now
+        # When count is 0 we are rotating the center object
+        # Eulers used for rotation. Value of rotate used to determine which axis we are rotating on relative to the center object. x, z, y
+        if (rotate >= 0 & rotate <=2):
+            self.scene.cube.eulers[rotate] += 0.25
+            if self.scene.cube.eulers[rotate] > 360:
+                self.scene.cube.eulers[rotate] -= 360
 
-
-                # Rotation matrix
-                model_transform = pyrr.matrix44.multiply(
-                    m1=model_transform,
-                    m2=pyrr.matrix44.create_from_eulers(
-                        eulers=np.radians(cube.eulers), dtype=np.float32
-                    )
-                )
-                # Used to scale objects
-                model_transform = pyrr.matrix44.multiply(
-                    m1=model_transform,
-                    m2=pyrr.matrix44.create_from_scale(np.array([scale, scale, scale]), dtype=np.float32)
-                )
-            # When count is 1 (ie > 0) we are rotating the peripheral object around center object
-            elif count > 0:
-                # translate
-
-                model_transform = pyrr.matrix44.multiply(
-                    m1=model_transform,
-                    m2=pyrr.matrix44.create_from_translation(np.array([3, 0, 0]), dtype=np.float32)
-                )
-
-                if (rotate >= 0 & rotate <=2):
-                    cube.eulers[rotate] += 0.25
-                    if cube.eulers[rotate] > 360:
-                        cube.eulers[rotate] -= 360
-
-                model_transform = pyrr.matrix44.multiply(
-                    m1=model_transform,
-                    m2=pyrr.matrix44.create_from_eulers(
-                        eulers=np.radians(cube.eulers), dtype=np.float32
-                    )
-                )
-
-                # Used to scale objects
-                model_transform = pyrr.matrix44.multiply(
-                    m1=model_transform,
-                    m2=pyrr.matrix44.create_from_scale(np.array([scale, scale, scale]), dtype=np.float32)
-                )
-
-                model_transform = pyrr.matrix44.multiply(
-                    m1=model_transform,
-                    m2=pyrr.matrix44.create_from_translation(np.array([3, 0, 0]), dtype=np.float32)
-                    )
-
-
-
-            # Used to translate both objects
-            model_transform = pyrr.matrix44.multiply(
-                m1=model_transform,
-                m2=pyrr.matrix44.create_from_translation(np.array([x, y, z]), dtype=np.float32)
+        # Rotation matrix
+        model_transform = pyrr.matrix44.multiply(
+            m1=model_transform,
+            m2=pyrr.matrix44.create_from_eulers(
+                eulers=np.radians(self.scene.cube.eulers), dtype=np.float32
             )
+        )
+        # Used to scale objects
+        model_transform = pyrr.matrix44.multiply(
+            m1=model_transform,
+            m2=pyrr.matrix44.create_from_scale(np.array([scale, scale, scale]), dtype=np.float32)
+        )
 
-            # Send to position
-            model_transform = pyrr.matrix44.multiply(
-                m1=model_transform,
-                m2=pyrr.matrix44.create_from_translation(
-                    vec=np.array(cube.position), dtype=np.float32
-                )
+        # Send to position
+        model_transform = pyrr.matrix44.multiply(
+            m1=model_transform,
+            m2=pyrr.matrix44.create_from_translation(
+                vec=np.array(self.scene.cube.position), dtype=np.float32
             )
-            glUniformMatrix4fv(self.modelMatrixLocation, 1, GL_FALSE, model_transform)
+        )
+        glUniformMatrix4fv(self.modelMatrixLocation, 1, GL_FALSE, model_transform)
 
 
-            glBindVertexArray(self.cube_load.vao)
-            glDrawArrays(GL_TRIANGLES, 0, self.cube_load.vertexCount)
+        glBindVertexArray(self.cube_load.vao)
+        glDrawArrays(GL_TRIANGLES, 0, self.cube_load.vertexCount)
 
-            count = count + 1
         # Swap the front and back buffers on the window, effectively putting what we just "drew"
         # Onto the screen (whereas previously it only existed in memory)
         pg.display.flip()

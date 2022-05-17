@@ -20,9 +20,6 @@ def main():
 	# Game loop runs for ever
 	rotate = -1
 	scale = 1
-	x = 0
-	y = 0
-	z = 0
 	while running:
 
 
@@ -63,22 +60,11 @@ def main():
 				elif event.key == pg.K_MINUS: # Scale down the size of the objects
 					scale = scale - 0.1
 					print(scale)
-				elif event.key == pg.K_UP:  # Move Objects along y axis
-					y = y + 0.1
-				elif event.key == pg.K_DOWN:
-					y = y - 0.1
-				elif event.key == pg.K_LEFT: # Move Objects along x axis
-					x = x - 0.1
-				elif event.key == pg.K_RIGHT:
-					x = x + 0.1
-				elif event.key == pg.K_a:     # Add object and reset scene
-					window.initGL(addSwitch=True, objectname=filename)
-					rotate = -1
 				elif event.key == pg.K_r:    # Reset Scene -> Need to fix
 					window.initGL(objectname=filename)
 					rotate = -1
-		window.render(rotate, scale, x, y, z) # Refresh screen
-	
+		window.render(rotate, scale) # Refresh screen
+
 	window.cleanup()
 	pg.quit
 
