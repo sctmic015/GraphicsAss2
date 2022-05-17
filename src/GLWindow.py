@@ -61,9 +61,6 @@ class Camera:
         self.position = np.array(position, dtype=np.float32)
         self.update_vectors()
 
-    def update_vectors
-
-
 
 # Used to define Cube objects to be displayed
 class Scene:
