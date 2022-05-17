@@ -3,6 +3,7 @@ from OpenGL.GL import *
 from OpenGL.GL.shaders import compileProgram, compileShader
 import numpy as np
 import pyrr
+from sklearn.preprocessing import normalize
 
 from Geometry import Geometry
 
@@ -61,6 +62,21 @@ class Camera:
         self.position = np.array(position, dtype=np.float32)
         self.update_vectors()
 
+    def update_vectors(self):
+        cameraTarget = np.array([0, 0, 0], dtype=np.float32)
+        self.cameraDirection = Camera.norm(self.position - cameraTarget)
+        print(self.cameraDirection)
+        globalUp = np.array([0, 1, 0], dtype=np.float32)
+        self.cameraRight = Camera.norm(np.cross(globalUp, self.cameraDirection))
+        print(self.cameraRight)
+        self.up = Camera.norm(np.cross(self.cameraDirection, self.cameraRight))
+        print(self.up)
+
+
+
+    def norm(array):
+        array = array / np.linalg.norm(array)
+        return array
 
 # Used to define Cube objects to be displayed
 class Scene:
@@ -72,6 +88,15 @@ class Scene:
                 eulers=[0, 0, 0]
             )
 
+        self.camera = Camera(
+            position=[0, 0, 3]
+        )
+
+    def move_camera(self, move):
+
+        move = np.array(move, dtype=np.float32)
+        self.player.position += move
+        self.player.update_vectors
 
 class OpenGLWindow:
 
@@ -117,13 +142,6 @@ class OpenGLWindow:
         # Shows which colour we want to show on our screen
         glClearColor(0, 0, 0, 1)
 
-
-
-        # Note that this path is relative to your working directory when running the program
-        # You will need change the filepath if you are running the script from inside ./src/
-        # Call function and call resulting shader
-        # Should have shader in use before declaring data
-
         self.shader = self.loadShaderProgram("./shaders/simple.vert", "./shaders/simple.frag")
         glUseProgram(self.shader)
 
@@ -153,6 +171,8 @@ class OpenGLWindow:
 
         # Don't have to query projection matrix because used every frame
         self.modelMatrixLocation = glGetUniformLocation(self.shader, "model")
+        self.viewMatrixLocation = glGetUniformLocation(self.shader, "view")
+        self.cameraPosLoc = glGetUniformLocation(self.shader, "cameraPostion")
 
         print("Setup complete!")
 
@@ -161,12 +181,17 @@ class OpenGLWindow:
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)   # Colour buffer stores all pixels on screen. Colours stored in colour buffer bit
         glUseProgram(self.shader)  # You may not need this line
 
+        view_transform = pyrr.matrix44.create_look_at(
+            eye=self.scene.camera.position,  # Position as eye
+            target=self.scene.camera.cameraDirection,  # Where are looking to
+            up=self.scene.camera.up, dtype=np.float32  # Pass up for some reason
+        )
+        glUniformMatrix4fv(self.viewMatrixLocation, 1, GL_FALSE, view_transform)
 
-        # Start with identity and multiply on progressively
-        # Identity Matrix
+        glUniform3fv(self.cameraPosLoc, 1, self.scene.camera.position)
+
         model_transform = pyrr.matrix44.create_identity(dtype=np.float32)    # Gonna leave this here for now
-        # When count is 0 we are rotating the center object
-        # Eulers used for rotation. Value of rotate used to determine which axis we are rotating on relative to the center object. x, z, y
+
         if (rotate >= 0 & rotate <=2):
             self.scene.cube.eulers[rotate] += 0.25
             if self.scene.cube.eulers[rotate] > 360:
