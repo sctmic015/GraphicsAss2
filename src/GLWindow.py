@@ -3,6 +3,8 @@ from OpenGL.GL import *
 from OpenGL.GL.shaders import compileProgram, compileShader
 import numpy as np
 import pyrr
+import math
+import time
 from sklearn.preprocessing import normalize
 
 from Geometry import Geometry
@@ -84,12 +86,12 @@ class Scene:
 
         # Initial object in scene centered in screen
         self.cube = Cube(
-                position=[0, 0, -10],
+                position=[0, 0, 0],
                 eulers=[0, 0, 0]
             )
 
         self.camera = Camera(
-            position=[0, 0, 3]
+            position=[0, 0, 9]
         )
 
     def move_camera(self, move):
@@ -104,6 +106,7 @@ class OpenGLWindow:
         self.triangle = None
         self.clock = pg.time.Clock()
         self.scene = Scene()
+        self.theta = 0
 
 
     def loadShaderProgram(self, vertex, fragment):
@@ -121,7 +124,7 @@ class OpenGLWindow:
         return shader
 
     # Initialise
-    def initGL(self, screen_width=960, screen_height=540, objectname="cube.obj"):
+    def initGL(self, screen_width=960, screen_height=540, objectname="suzanne.obj"):
         # Initialise Scene. Has to be here in order for us to reset the scene
         #self.scene = Scene()
         pg.init()
@@ -181,11 +184,25 @@ class OpenGLWindow:
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)   # Colour buffer stores all pixels on screen. Colours stored in colour buffer bit
         glUseProgram(self.shader)  # You may not need this line
 
+        self.theta += 0.6
+        theta_copy = math.radians(self.theta)
+        radius = 9
+        camx = math.sin(theta_copy) * radius
+        camz = math.cos(theta_copy) * radius
+
+        view_transform = pyrr.matrix44.create_look_at(
+            eye=np.array([camx, 0, camz], dtype=np.float32),  # Position as eye
+            target=np.array([0,0,0], dtype=np.float32),  # Where are looking to
+            up=np.array([0,1,0], dtype=np.float32)  # Pass up for some reason
+        )
+
+        '''
         view_transform = pyrr.matrix44.create_look_at(
             eye=self.scene.camera.position,  # Position as eye
             target=self.scene.camera.cameraDirection,  # Where are looking to
             up=self.scene.camera.up, dtype=np.float32  # Pass up for some reason
         )
+        '''
         glUniformMatrix4fv(self.viewMatrixLocation, 1, GL_FALSE, view_transform)
 
         glUniform3fv(self.cameraPosLoc, 1, self.scene.camera.position)
