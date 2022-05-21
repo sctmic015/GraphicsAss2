@@ -163,9 +163,9 @@ class OpenGLWindow:
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)   # Colour buffer stores all pixels on screen. Colours stored in colour buffer bit
         glUseProgram(self.shader)  # You may not need this line
 
+        self.theta += 0.6
+        theta_copy = math.radians(self.theta)
         if rotateCam:
-            self.theta += 0.6
-            theta_copy = math.radians(self.theta)
             radius = 9
             camx = math.sin(theta_copy) * radius
             camz = math.cos(theta_copy) * radius
@@ -184,7 +184,9 @@ class OpenGLWindow:
 
         glUniformMatrix4fv(self.viewMatrixLocation, 1, GL_FALSE, view_transform)
 
-
+        camx = math.sin(theta_copy) * 9
+        camz = math.cos(theta_copy) * 9
+        self.scene.light.position = np.array([camx, 0, camz], dtype=np.float32)
 
         glUniform3fv(self.lightLocation["position"], 1, self.scene.light.position)
         glUniform3fv(self.lightLocation["color"], 1, self.scene.light.color)

@@ -43,7 +43,7 @@ void main()
 
     vec3 diffuse = colorL1 * strengthL1 * kd;
 
-    vec3 specular = vec3(0, 0, 1) * strengthL1 * ks / 10;
+    vec3 specular = vec3(0, 0, 1) * strengthL1 * ks / 100;
 
     temp += amb + diffuse + specular;
 
