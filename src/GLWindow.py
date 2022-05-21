@@ -15,40 +15,6 @@ from Geometry import Geometry
 # strings but text files are better. 
 # Notes om shaders. They do colour and positions seperately. It looks like we do it as one. vec4 so transformations can be done ith matrics
 
-class Triangle:
-
-    def __init__(self, shader):
-        self.vertexLoc = glGetAttribLocation(shader, "position")
-        #x, y, z, r, g, b    List of vertices. All the data we want to store at each point in a primitive. Here only positions - no colours or textures etc
-        # openGL uses normalised device co-ordinates
-        # x - left tp right - -1 to +1
-        # y - bottom to top
-        # z - depth - 0 -> flat on screen
-        # np array data type built for c style data reading 
-        # np array constructors used to pass to graphics card
-        # must be 32 
-        self.vertices = np.array([0.0, 0.5, 0.0,
-                                  -0.5, -0.5, 0.0,
-                                  0.5, -0.5, 0.0], dtype=np.float32)
-
-        self.vertexCount = 3
-        self.vbo = glGenBuffers(1)     # Vertex buffer object. One buffer for us.
-        glBindBuffer(GL_ARRAY_BUFFER, self.vbo) # Bind buffer so we know which one we are talking about
-        glBufferData(GL_ARRAY_BUFFER, self.vertices.nbytes, self.vertices, GL_STATIC_DRAW) # Shift buffer off to graphics card. # Static draw means set data once and use many times. Static draw for reading and writing multiple times. Both good though
-
-        # enable attribute and describe how it is laid out in VBO. Not sure what vertex.loc is. 3 points in attribute
-        # Data type floating point decimals 
-        # False as do not need to normalise numbers
-        # Stride is how many bytes we need to step to get to next position. Not sure why it is 0
-        # Offset. How far we need to go to find type. Void pointer is special type of memory address. 
-        # Allocating memory to graphcis card
-        glEnableVertexAttribArray(self.vertexLoc)
-        glVertexAttribPointer(self.vertexLoc, 3, GL_FLOAT, GL_FALSE, 0, ctypes.c_void_p(0))
-
-    def cleanup(self):
-        # Freeing vbo. , represents a list
-        glDeleteBuffers(1, (self.vbo,))
-
 # Cube Object that holds position and eulers for an object
 class Cube:
 
@@ -80,7 +46,14 @@ class Camera:
         array = array / np.linalg.norm(array)
         return array
 
-# Used to define Cube objects to be displayed
+
+class Light:
+
+    def __init__(self, position, color, strength):
+        self.position = np.array(position, dtype=np.float32)
+        self.color = np.array(color, dtype=np.float32)
+        self.strength = strength
+
 class Scene:
     def __init__(self):
 
@@ -93,7 +66,11 @@ class Scene:
         self.camera = Camera(
             position=[0, 0, 9]
         )
-
+        self.light = Light(
+            position=np.array([2, 1, 3], dtype=np.float32),
+            color=np.array([1, 0, 0], dtype=np.float32),
+            strength=12
+        )
     def move_camera(self, move):
 
         move = np.array(move, dtype=np.float32)
@@ -148,14 +125,11 @@ class OpenGLWindow:
         self.shader = self.loadShaderProgram("./shaders/simple.vert", "./shaders/simple.frag")
         glUseProgram(self.shader)
 
-        colorLoc = glGetUniformLocation(self.shader, "objectColor")
-        glUniform3f(colorLoc, 1.0, 1.0, 1.0)
+        # colorLoc = glGetUniformLocation(self.shader, "objectColor")
+        # glUniform3f(colorLoc, 1.0, 1.0, 1.0)
 
-        # Uncomment this for triangle rendering
-        #self.triangle = Triangle(self.shader)
 
-        # Uncomment this for model rendering
-        # Load obj file
+        self.wood_texture = Material("wood.jpeg")
         name = "resources/" + objectname
         self.cube_load = Geometry(name)
 
@@ -176,34 +150,47 @@ class OpenGLWindow:
         self.modelMatrixLocation = glGetUniformLocation(self.shader, "model")
         self.viewMatrixLocation = glGetUniformLocation(self.shader, "view")
         self.cameraPosLoc = glGetUniformLocation(self.shader, "cameraPostion")
+        self.lightLocation = {
+            "position": glGetUniformLocation(self.shader, "Light.position"),
+            "color": glGetUniformLocation(self.shader, "Light.color"),
+            "strength": glGetUniformLocation(self.shader, "Light.strength")
+        }
 
         print("Setup complete!")
 
 
-    def render(self, rotate, scale):
+    def render(self, rotate, scale, rotateCam = False):
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)   # Colour buffer stores all pixels on screen. Colours stored in colour buffer bit
         glUseProgram(self.shader)  # You may not need this line
 
-        self.theta += 0.6
-        theta_copy = math.radians(self.theta)
-        radius = 9
-        camx = math.sin(theta_copy) * radius
-        camz = math.cos(theta_copy) * radius
+        if rotateCam:
+            self.theta += 0.6
+            theta_copy = math.radians(self.theta)
+            radius = 9
+            camx = math.sin(theta_copy) * radius
+            camz = math.cos(theta_copy) * radius
 
-        view_transform = pyrr.matrix44.create_look_at(
-            eye=np.array([camx, 0, camz], dtype=np.float32),  # Position as eye
-            target=np.array([0,0,0], dtype=np.float32),  # Where are looking to
-            up=np.array([0,1,0], dtype=np.float32)  # Pass up for some reason
-        )
+            view_transform = pyrr.matrix44.create_look_at(
+                eye=np.array([camx, 0, camz], dtype=np.float32),  # Position as eye
+                target=np.array([0,0,0], dtype=np.float32),  # Where are looking to
+                up=np.array([0,1,0], dtype=np.float32)  # Pass up for some reason
+            )
+        else:
+            view_transform = pyrr.matrix44.create_look_at(
+                eye=self.scene.camera.position,  # Position as eye
+                target=self.scene.camera.cameraDirection,  # Where are looking to
+                up=self.scene.camera.up, dtype=np.float32  # Pass up for some reason
+            )
 
-        '''
-        view_transform = pyrr.matrix44.create_look_at(
-            eye=self.scene.camera.position,  # Position as eye
-            target=self.scene.camera.cameraDirection,  # Where are looking to
-            up=self.scene.camera.up, dtype=np.float32  # Pass up for some reason
-        )
-        '''
         glUniformMatrix4fv(self.viewMatrixLocation, 1, GL_FALSE, view_transform)
+
+
+
+        glUniform3fv(self.lightLocation["position"], 1, self.scene.light.position)
+        glUniform3fv(self.lightLocation["color"], 1, self.scene.light.color)
+        glUniform1f(self.lightLocation["strength"], self.scene.light.strength)
+
+
 
         glUniform3fv(self.cameraPosLoc, 1, self.scene.camera.position)
 
@@ -259,4 +246,25 @@ class OpenGLWindow:
         self.cube_load.cleanup()
 
 
+class Material:
+
+    def __init__(self, filepath):
+        self.texture = glGenTextures(1)
+        glBindTexture(GL_TEXTURE_2D, self.texture)
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT)
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT)
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_LINEAR)
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
+        image = pg.image.load(filepath).convert()
+        image_width, image_height = image.get_rect().size
+        img_data = pg.image.tostring(image, 'RGBA')
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, image_width, image_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, img_data)
+        glGenerateMipmap(GL_TEXTURE_2D)
+
+    def use(self):
+        glActiveTexture(GL_TEXTURE0)
+        glBindTexture(GL_TEXTURE_2D, self.texture)
+
+    def destroy(self):
+        glDeleteTextures(1, (self.texture,))
 

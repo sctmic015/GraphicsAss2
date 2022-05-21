@@ -9,7 +9,7 @@ def main():
 			filename = sys.argv[1]
 			print(filename)
 	except:
-		filename = "suzanne.obj"
+		filename = "cube.obj"
 		print(filename)
 
 	window = OpenGLWindow()
@@ -20,6 +20,7 @@ def main():
 	# Game loop runs for ever
 	rotate = -1
 	scale = 1
+	rotateCam = False
 	while running:
 
 
@@ -63,7 +64,10 @@ def main():
 				elif event.key == pg.K_r:    # Reset Scene -> Need to fix
 					window.initGL(objectname=filename)
 					rotate = -1
-		window.render(rotate, scale) # Refresh screen
+				elif event.key == pg.K_w:
+					rotateCam = True
+
+		window.render(rotate, scale, rotateCam = rotateCam) # Refresh screen
 
 	window.cleanup()
 	pg.quit
