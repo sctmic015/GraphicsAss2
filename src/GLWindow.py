@@ -66,11 +66,17 @@ class Scene:
         self.camera = Camera(
             position=[0, 0, 9]
         )
-        self.light = Light(
+        self.light1 = Light(
             position=np.array([2, 1, 3], dtype=np.float32),
             color=np.array([1, 0, 0], dtype=np.float32),
             strength=12
         )
+        self.light2 = Light(
+            position=np.array([-2, -1, -3], dtype=np.float32),
+            color=np.array([0, 1, 0], dtype=np.float32),
+            strength=12
+        )
+
     def move_camera(self, move):
 
         move = np.array(move, dtype=np.float32)
@@ -150,10 +156,16 @@ class OpenGLWindow:
         self.modelMatrixLocation = glGetUniformLocation(self.shader, "model")
         self.viewMatrixLocation = glGetUniformLocation(self.shader, "view")
         self.cameraPosLoc = glGetUniformLocation(self.shader, "cameraPostion")
-        self.lightLocation = {
-            "position": glGetUniformLocation(self.shader, "Light.position"),
-            "color": glGetUniformLocation(self.shader, "Light.color"),
-            "strength": glGetUniformLocation(self.shader, "Light.strength")
+        self.light1Location = {
+            "position": glGetUniformLocation(self.shader, "Light1.position"),
+            "color": glGetUniformLocation(self.shader, "Light1.color"),
+            "strength": glGetUniformLocation(self.shader, "Light1.strength")
+        }
+
+        self.light2Location = {
+            "position": glGetUniformLocation(self.shader, "Light2.position"),
+            "color": glGetUniformLocation(self.shader, "Light2.color"),
+            "strength": glGetUniformLocation(self.shader, "Light2.strength")
         }
 
         print("Setup complete!")
@@ -186,13 +198,19 @@ class OpenGLWindow:
 
         camx = math.sin(theta_copy) * 9
         camz = math.cos(theta_copy) * 9
-        self.scene.light.position = np.array([camx, 0, camz], dtype=np.float32)
+        self.scene.light1.position = np.array([camx, 0, camz], dtype=np.float32)
 
-        glUniform3fv(self.lightLocation["position"], 1, self.scene.light.position)
-        glUniform3fv(self.lightLocation["color"], 1, self.scene.light.color)
-        glUniform1f(self.lightLocation["strength"], self.scene.light.strength)
+        glUniform3fv(self.light1Location["position"], 1, self.scene.light1.position)
+        glUniform3fv(self.light1Location["color"], 1, self.scene.light1.color)
+        glUniform1f(self.light1Location["strength"], self.scene.light1.strength)
 
+        camx = math.sin(theta_copy - math.radians(180)) * 9
+        camz = math.cos(theta_copy - math.radians(180)) * 9
+        self.scene.light2.position = np.array([camx, 0, camz], dtype=np.float32)
 
+        glUniform3fv(self.light2Location["position"], 1, self.scene.light2.position)
+        glUniform3fv(self.light2Location["color"], 1, self.scene.light2.color)
+        glUniform1f(self.light2Location["strength"], self.scene.light2.strength)
 
         glUniform3fv(self.cameraPosLoc, 1, self.scene.camera.position)
 
