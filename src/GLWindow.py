@@ -67,14 +67,14 @@ class Scene:
             position=[0, 0, 9]
         )
         self.light1 = Light(
-            position=np.array([2, 1, 3], dtype=np.float32),
+            position=np.array([6, 6, 6], dtype=np.float32),
             color=np.array([1, 0, 0], dtype=np.float32),
-            strength=12
+            strength=50
         )
         self.light2 = Light(
-            position=np.array([-2, -1, -3], dtype=np.float32),
+            position=np.array([-2, -1, -2], dtype=np.float32),
             color=np.array([0, 1, 0], dtype=np.float32),
-            strength=12
+            strength=0
         )
 
     def move_camera(self, move):
@@ -196,17 +196,17 @@ class OpenGLWindow:
 
         glUniformMatrix4fv(self.viewMatrixLocation, 1, GL_FALSE, view_transform)
 
-        camx = math.sin(theta_copy) * 9
-        camz = math.cos(theta_copy) * 9
-        self.scene.light1.position = np.array([camx, 0, camz], dtype=np.float32)
+        #camx = math.sin(theta_copy) * 9
+        #camz = math.cos(theta_copy) * 9
+        #self.scene.light1.position = np.array([camx, 0, camz], dtype=np.float32)
 
         glUniform3fv(self.light1Location["position"], 1, self.scene.light1.position)
         glUniform3fv(self.light1Location["color"], 1, self.scene.light1.color)
         glUniform1f(self.light1Location["strength"], self.scene.light1.strength)
 
-        camx = math.sin(theta_copy - math.radians(180)) * 9
-        camz = math.cos(theta_copy - math.radians(180)) * 9
-        self.scene.light2.position = np.array([camx, 0, camz], dtype=np.float32)
+        #camx = math.sin(theta_copy - math.radians(180)) * 9
+        #camz = math.cos(theta_copy - math.radians(180)) * 9
+        #self.scene.light2.position = np.array([camx, 0, camz], dtype=np.float32)
 
         glUniform3fv(self.light2Location["position"], 1, self.scene.light2.position)
         glUniform3fv(self.light2Location["color"], 1, self.scene.light2.color)

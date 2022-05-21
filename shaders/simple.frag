@@ -25,15 +25,8 @@ void main()
 
     vec3 baseTexture = texture(imageTexture, fragmentTexCoord).rgb;
 
-    vec3 positionL1 = Light1.position;
-    float strengthL1 = Light1.strength;
-    vec3 colorL1 = Light1.color;
-
-    vec3 positionL2 = Light2.position;
-    float strengthL2 = Light2.strength;
-    vec3 colorL2 = Light2.color;
-
-    vec3 fragToLight1 = positionL1 - fragmentPosition;
+    vec3 fragToLight1 = Light1.position - fragmentPosition;
+    float distance = length(fragToLight1);
     fragToLight1 = normalize(fragToLight1);
     vec3 fragToCamera = cameraPosition - fragmentPosition;
     fragToCamera = normalize(fragToCamera);
@@ -43,7 +36,7 @@ void main()
     float kd = max(dot(fragToLight1,fragmentNormal), 0.0);
     float ks = pow(max(dot(fragmentNormal,halfwayVec),0.0), 32);
 
-    vec3 fragToLight2 = positionL2 - fragmentPosition;
+    vec3 fragToLight2 = Light2.position - fragmentPosition;
     fragToLight2 = normalize(fragToLight2);
     vec3 halfwayVec2 = fragToLight2 - fragToCamera;
     halfwayVec2 = normalize(halfwayVec2);
@@ -51,15 +44,15 @@ void main()
     float kd2 = max(dot(fragToLight2,fragmentNormal), 0.0);
     float ks2 = pow(max(dot(fragmentNormal,halfwayVec2),0.0), 32);
 
-    vec3 amb = 0.5 * baseTexture;
+    vec3 amb = 0.2 * baseTexture;
 
-    vec3 diffuse = colorL1 * strengthL1 * kd;
+    vec3 diffuse = Light1.color * Light1.strength * kd * baseTexture/ (distance * distance);
 
-    vec3 diffuse2 = colorL2 * strengthL2 * kd2;
+    vec3 diffuse2 = Light2.color * Light2.strength * kd2 * baseTexture/ (length(fragToLight2) * length(fragToLight2));
 
-    vec3 specular = vec3(0, 0, 1) * strengthL1 * ks / 100;
+    vec3 specular = Light1.color * Light1.strength * ks / (distance * distance);
 
-    vec3 specular2 = vec3(0, 0, 1) * strengthL2 * ks2 / 100;
+    vec3 specular2 = vec3(0, 0, 1) * Light2.strength * ks2 / (length(fragToLight1) * length(fragToLight1));
     temp += amb + diffuse + specular + diffuse2 + specular2;
 
     color = vec4(temp, 1);
