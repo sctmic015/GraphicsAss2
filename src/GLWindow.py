@@ -67,14 +67,14 @@ class Scene:
             position=[0, 0, 9]
         )
         self.light1 = Light(
-            position=np.array([6, 6, 6], dtype=np.float32),
+            position=np.array([3, 3, 3], dtype=np.float32),
             color=np.array([1, 0, 0], dtype=np.float32),
-            strength=50
+            strength=3
         )
         self.light2 = Light(
-            position=np.array([-2, -1, -2], dtype=np.float32),
-            color=np.array([0, 1, 0], dtype=np.float32),
-            strength=0
+            position=np.array([-3, 3, 3], dtype=np.float32),
+            color=np.array([0, 0, 1], dtype=np.float32),
+            strength=3
         )
 
     def move_camera(self, move):
@@ -89,7 +89,8 @@ class OpenGLWindow:
         self.triangle = None
         self.clock = pg.time.Clock()
         self.scene = Scene()
-        self.theta = 0
+        self.CameraTheta = 0
+        self.lightTheta = 0
 
 
     def loadShaderProgram(self, vertex, fragment):
@@ -107,7 +108,7 @@ class OpenGLWindow:
         return shader
 
     # Initialise
-    def initGL(self, screen_width=960, screen_height=540, objectname="suzanne.obj"):
+    def initGL(self, screen_width=810, screen_height=540, objectname="suzanne.obj"):
         # Initialise Scene. Has to be here in order for us to reset the scene
         #self.scene = Scene()
         pg.init()
@@ -171,42 +172,42 @@ class OpenGLWindow:
         print("Setup complete!")
 
 
-    def render(self, rotate, scale, rotateCam = False):
+    def render(self, rotate, scale, rotateCam = False, rotateLights = False):
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)   # Colour buffer stores all pixels on screen. Colours stored in colour buffer bit
         glUseProgram(self.shader)  # You may not need this line
 
-        self.theta += 0.6
-        theta_copy = math.radians(self.theta)
-        if rotateCam:
-            radius = 9
-            camx = math.sin(theta_copy) * radius
-            camz = math.cos(theta_copy) * radius
+        theta_copy = math.radians(self.CameraTheta)
+        radius = 9
+        camx = math.sin(theta_copy) * radius
+        camz = math.cos(theta_copy) * radius
 
-            view_transform = pyrr.matrix44.create_look_at(
-                eye=np.array([camx, 0, camz], dtype=np.float32),  # Position as eye
-                target=np.array([0,0,0], dtype=np.float32),  # Where are looking to
-                up=np.array([0,1,0], dtype=np.float32)  # Pass up for some reason
-            )
-        else:
-            view_transform = pyrr.matrix44.create_look_at(
-                eye=self.scene.camera.position,  # Position as eye
-                target=self.scene.camera.cameraDirection,  # Where are looking to
-                up=self.scene.camera.up, dtype=np.float32  # Pass up for some reason
-            )
+        if rotateCam:
+            self.CameraTheta += 0.3
+
+        view_transform = pyrr.matrix44.create_look_at(
+            eye=np.array([camx, 0, camz], dtype=np.float32),  # Position as eye
+            target=np.array([0,0,0], dtype=np.float32),  # Where are looking to
+            up=np.array([0,1,0], dtype=np.float32)  # Pass up for some reason
+        )
+
 
         glUniformMatrix4fv(self.viewMatrixLocation, 1, GL_FALSE, view_transform)
 
-        #camx = math.sin(theta_copy) * 9
-        #camz = math.cos(theta_copy) * 9
-        #self.scene.light1.position = np.array([camx, 0, camz], dtype=np.float32)
+        if rotateLights:
+            lightThetaCopy = math.radians(self.lightTheta)
+            lightx = math.sin(lightThetaCopy) * 3
+            lightz = math.cos(lightThetaCopy) * 3
+            self.scene.light1.position = np.array([lightx, 3, lightz], dtype=np.float32)
+
+            camx = math.sin(lightThetaCopy - math.radians(120)) * 3
+            camz = math.cos(lightThetaCopy - math.radians(120)) * 3
+            self.scene.light2.position = np.array([camx, 3, camz], dtype=np.float32)
+
+            self.lightTheta += 0.3
 
         glUniform3fv(self.light1Location["position"], 1, self.scene.light1.position)
         glUniform3fv(self.light1Location["color"], 1, self.scene.light1.color)
         glUniform1f(self.light1Location["strength"], self.scene.light1.strength)
-
-        #camx = math.sin(theta_copy - math.radians(180)) * 9
-        #camz = math.cos(theta_copy - math.radians(180)) * 9
-        #self.scene.light2.position = np.array([camx, 0, camz], dtype=np.float32)
 
         glUniform3fv(self.light2Location["position"], 1, self.scene.light2.position)
         glUniform3fv(self.light2Location["color"], 1, self.scene.light2.color)
@@ -265,7 +266,7 @@ class OpenGLWindow:
         glDeleteVertexArrays(1, (self.cube_load.vao,))
         self.cube_load.cleanup()
 
-
+# Followed tutorial https://www.youtube.com/playlist?list=PLn3eTxaOtL2PDnEVNwOgZFm5xYPr4dUoR
 class Material:
 
     def __init__(self, filepath):

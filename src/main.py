@@ -9,7 +9,7 @@ def main():
 			filename = sys.argv[1]
 			print(filename)
 	except:
-		filename = "cube.obj"
+		filename = "sphere.obj"
 		print(filename)
 
 	window = OpenGLWindow()
@@ -21,6 +21,7 @@ def main():
 	rotate = -1
 	scale = 1
 	rotateCam = False
+	rotateLights = False
 	while running:
 
 
@@ -30,23 +31,6 @@ def main():
 			elif event.type == pg.KEYDOWN:
 				if event.key == pg.K_q:  # This event triggers when the q key is pressed down
 					running = False
-				elif event.key == pg.K_c: # Change colours: Red, Green, Blue and White
-					if count % 4 == 0:
-						colorLoc = glGetUniformLocation(window.shader, "objectColor")
-						glUniform3f(colorLoc, 1, 0, 0)
-						count = count + 1
-					elif count % 4 == 1:
-						colorLoc = glGetUniformLocation(window.shader, "objectColor")
-						glUniform3f(colorLoc, 0, 1, 0)
-						count = count + 1
-					elif count % 4 == 2:
-						colorLoc = glGetUniformLocation(window.shader, "objectColor")
-						glUniform3f(colorLoc, 0, 0, 1)
-						count = count + 1
-					elif count % 4 == 3:
-						colorLoc = glGetUniformLocation(window.shader, "objectColor")
-						glUniform3f(colorLoc, 1, 1, 1)
-						count = count + 1
 				elif event.key == pg.K_z: # Changes Rotation to Z axis
 					rotate = 2
 				elif event.key == pg.K_y: # Changes Rotation to Y axis
@@ -65,9 +49,17 @@ def main():
 					window.initGL(objectname=filename)
 					rotate = -1
 				elif event.key == pg.K_w:
-					rotateCam = True
+					if not rotateCam:
+						rotateCam = True
+					else:
+						rotateCam = False
+				elif event.key == pg.K_l:
+					if not rotateLights:
+						rotateLights = True
+					else:
+						rotateLights = False
 
-		window.render(rotate, scale, rotateCam = rotateCam) # Refresh screen
+		window.render(rotate, scale, rotateCam = rotateCam, rotateLights = rotateLights) # Refresh screen
 
 	window.cleanup()
 	pg.quit
