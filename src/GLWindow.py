@@ -136,7 +136,23 @@ class OpenGLWindow:
         # glUniform3f(colorLoc, 1.0, 1.0, 1.0)
 
 
-        self.wood_texture = Material("wood.jpeg")
+        self.wood_texture = Material("brickwall.jpg", "brickwall_normal.jpg")
+        self.wood_texture.use()
+
+
+        glUniform1i(
+            glGetUniformLocation(
+                self.shader, "diffuseMap"
+            ), 0
+        )
+
+        glUniform1i(
+            glGetUniformLocation(
+                self.shader, "normalMap"
+            ), 1
+        )
+
+
         name = "resources/" + objectname
         self.cube_load = Geometry(name)
 
@@ -269,22 +285,37 @@ class OpenGLWindow:
 # Followed tutorial https://www.youtube.com/playlist?list=PLn3eTxaOtL2PDnEVNwOgZFm5xYPr4dUoR
 class Material:
 
-    def __init__(self, filepath):
-        self.texture = glGenTextures(1)
-        glBindTexture(GL_TEXTURE_2D, self.texture)
+    def __init__(self, file1, file2):
+        self.textures = []
+
+        self.textures.append(glGenTextures(1))
+        glBindTexture(GL_TEXTURE_2D, self.textures[0])
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT)
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT)
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_LINEAR)
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
-        image = pg.image.load(filepath).convert()
+        image = pg.image.load(file1).convert()
+        image_width, image_height = image.get_rect().size
+        img_data = pg.image.tostring(image, 'RGBA')
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, image_width, image_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, img_data)
+        glGenerateMipmap(GL_TEXTURE_2D)
+
+        self.textures.append(glGenTextures(1))
+        glBindTexture(GL_TEXTURE_2D, self.textures[1])
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT)
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT)
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_LINEAR)
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
+        image = pg.image.load(file2).convert()
         image_width, image_height = image.get_rect().size
         img_data = pg.image.tostring(image, 'RGBA')
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, image_width, image_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, img_data)
         glGenerateMipmap(GL_TEXTURE_2D)
 
     def use(self):
-        glActiveTexture(GL_TEXTURE0)
-        glBindTexture(GL_TEXTURE_2D, self.texture)
+        for i in range(len(self.textures)):
+            glActiveTexture(GL_TEXTURE0 + i)
+            glBindTexture(GL_TEXTURE_2D, self.textures[i])
 
     def destroy(self):
         glDeleteTextures(1, (self.texture,))

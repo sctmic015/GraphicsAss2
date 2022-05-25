@@ -8,9 +8,10 @@ struct PointLight {
 
 in vec2 fragmentTexCoord;
 in vec3 fragmentPosition;
-in vec3 fragmentNormal;
+in mat3 TBN;
 
-uniform sampler2D imageTexture;
+uniform sampler2D diffuseMap;
+uniform sampler2D normalMap;
 uniform PointLight Light1;
 uniform PointLight Light2;
 uniform vec3 cameraPosition;
@@ -23,7 +24,7 @@ void main()
 {
     vec3 temp = vec3(0);
 
-    vec3 baseTexture = texture(imageTexture, fragmentTexCoord).rgb;
+    vec3 baseTexture = texture(diffuseMap, fragmentTexCoord).rgb;
     vec3 resultL1 = vec3(0);
 
     vec3 positionL1 = Light1.position;
@@ -36,7 +37,9 @@ void main()
 
     vec3 fragToCamera = cameraPosition - fragmentPosition;
     fragToCamera = normalize(fragToCamera);
-    vec3 norm = normalize(fragmentNormal);
+    vec3 normal = texture(normalMap, fragmentTexCoord).rgb;
+    normal = normal * 2.0 - 1.0;
+    vec3 norm = normalize(TBN * normal);
     vec3 amb = 0.5 * baseTexture;
 
     // Light 1
@@ -44,7 +47,7 @@ void main()
     vec3 fragToLight1 = positionL1 - fragmentPosition;
     fragToLight1 = normalize(fragToLight1);
     vec3 reflectDir = -reflect(-fragToLight1, norm);
-    float kd = max(dot(fragToLight1,fragmentNormal), 0.0);
+    float kd = max(dot(fragToLight1,norm), 0.0);
     float ks = pow(max(dot(fragToCamera,reflectDir),0.0), 32);
 
     vec3 diffuse1 = colorL1 * strengthL1 * kd/10;
@@ -56,7 +59,7 @@ void main()
     vec3 fragToLight2 = positionL2 - fragmentPosition;
     fragToLight2 = normalize(fragToLight2);
     vec3 reflectDir2 = -reflect(-fragToLight2, norm);
-    float kd2 = max(dot(fragToLight2,fragmentNormal), 0.0);
+    float kd2 = max(dot(fragToLight2,norm), 0.0);
     float ks2 = pow(max(dot(fragToCamera,reflectDir2),0.0), 32);
 
     vec3 diffuse2 = colorL2 * strengthL2 * kd2/10;

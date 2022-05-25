@@ -7,14 +7,9 @@ from OpenGL.GL import *
 class Geometry:
 
     def __init__(self, filename):
-        # Vertices stores all of the model data per face in the following format:
-        # vertex_x, vertex_y, vertex_z, texture_s, texture_t, normal_x, normal_y, normal_z
-        # Each value is a 32bit float
-        # This means that if you wanted to get all of the vertex data:
-        # Your start index would be 0, size would be 3 (x, y , x) and your stride would be 32
-
+        # x, y, z, s, t, nx, ny, nz, tangent, bitangent, model(instanced)
         self.vertices = self.LoadFile(filename)
-        self.vertexCount = len(self.vertices) // 8
+        self.vertexCount = len(self.vertices) // 14
         self.vertices = np.array(self.vertices, dtype=np.float32)
 
         self.vao = glGenVertexArrays(1)
@@ -22,20 +17,27 @@ class Geometry:
         self.vbo = glGenBuffers(1)
         glBindBuffer(GL_ARRAY_BUFFER, self.vbo)
         glBufferData(GL_ARRAY_BUFFER, self.vertices.nbytes, self.vertices, GL_STATIC_DRAW)
-
-        # Create Vertex Attributes Pointers Here
-        # Note that you will need to use ctypes.c_void_p(i) to specify the starting index
-        # when using glVertexAttribPointer
-
+        offset = 0
         # position
         glEnableVertexAttribArray(0)
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 32, ctypes.c_void_p(0))
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 56, ctypes.c_void_p(offset))
+        offset += 12
         # texture
         glEnableVertexAttribArray(1)
-        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 32, ctypes.c_void_p(12))
+        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 56, ctypes.c_void_p(offset))
+        offset += 8
         # normal
         glEnableVertexAttribArray(2)
-        glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 32, ctypes.c_void_p(20))
+        glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 56, ctypes.c_void_p(offset))
+        offset += 12
+        # tangent
+        glEnableVertexAttribArray(3)
+        glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, 56, ctypes.c_void_p(offset))
+        offset += 12
+        # bitangent
+        glEnableVertexAttribArray(4)
+        glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, 56, ctypes.c_void_p(offset))
+        offset += 12
 
     def LoadFile(self, filename):
 
@@ -43,7 +45,6 @@ class Geometry:
         v = []
         vt = []
         vn = []
-        faces = []
 
         # final, assembled and packed result
         vertices = []
@@ -57,87 +58,93 @@ class Geometry:
                 if flag == "v":
                     # vertex
                     line = line.replace("v ", "")
-                    line = line.split()  # This accounts for '  ' spacing instead of ' ' spacing
+                    line = line.split(" ")
                     l = [float(x) for x in line]
                     v.append(l)
                 elif flag == "vt":
                     # texture coordinate
                     line = line.replace("vt ", "")
-                    line = line.split()
+                    line = line.split(" ")
                     l = [float(x) for x in line]
                     vt.append(l)
                 elif flag == "vn":
                     # normal
                     line = line.replace("vn ", "")
-                    line = line.split()
+                    line = line.split(" ")
                     l = [float(x) for x in line]
                     vn.append(l)
                 elif flag == "f":
                     # face, three or more vertices in v/vt/vn form
                     line = line.replace("f ", "")
                     line = line.replace("\n", "")
-                    faces.append(line)
+                    # get the individual vertices for each line
+                    line = line.split(" ")
+                    faceVertices = []
+                    faceTextures = []
+                    faceNormals = []
+                    for vertex in line:
+                        # break out into [v,vt,vn],
+                        # correct for 0 based indexing.
+                        l = vertex.split("/")
+                        position = int(l[0]) - 1
+                        faceVertices.append(v[position])
+                        texture = int(l[1]) - 1
+                        faceTextures.append(vt[texture])
+                        normal = int(l[2]) - 1
+                        faceNormals.append(vn[normal])
+                    # obj file uses triangle fan format for each face individually.
+                    # unpack each face
+                    triangles_in_face = len(line) - 2
+
+                    vertex_order = []
+                    """
+                        eg. 0,1,2,3 unpacks to vertices: [0,1,2,0,2,3]
+                    """
+                    for i in range(triangles_in_face):
+                        vertex_order.append(0)
+                        vertex_order.append(i + 1)
+                        vertex_order.append(i + 2)
+                    # calculate tangent and bitangent for point
+                    # how do model positions relate to texture positions?
+                    point1 = faceVertices[vertex_order[0]]
+                    point2 = faceVertices[vertex_order[1]]
+                    point3 = faceVertices[vertex_order[2]]
+                    uv1 = faceTextures[vertex_order[0]]
+                    uv2 = faceTextures[vertex_order[1]]
+                    uv3 = faceTextures[vertex_order[2]]
+                    # direction vectors
+                    deltaPos1 = [point2[i] - point1[i] for i in range(3)]
+                    deltaPos2 = [point3[i] - point1[i] for i in range(3)]
+                    deltaUV1 = [uv2[i] - uv1[i] for i in range(2)]
+                    deltaUV2 = [uv3[i] - uv1[i] for i in range(2)]
+                    # calculate
+                    den = 1 / (deltaUV1[0] * deltaUV2[1] - deltaUV2[0] * deltaUV1[1])
+                    tangent = []
+                    # tangent x
+                    tangent.append(den * (deltaUV2[1] * deltaPos1[0] - deltaUV1[1] * deltaPos2[0]))
+                    # tangent y
+                    tangent.append(den * (deltaUV2[1] * deltaPos1[1] - deltaUV1[1] * deltaPos2[1]))
+                    # tangent z
+                    tangent.append(den * (deltaUV2[1] * deltaPos1[2] - deltaUV1[1] * deltaPos2[2]))
+                    bitangent = []
+                    # bitangent x
+                    bitangent.append(den * (-deltaUV2[0] * deltaPos1[0] + deltaUV1[0] * deltaPos2[0]))
+                    # bitangent y
+                    bitangent.append(den * (-deltaUV2[0] * deltaPos1[1] + deltaUV1[0] * deltaPos2[1]))
+                    # bitangent z
+                    bitangent.append(den * (-deltaUV2[0] * deltaPos1[2] + deltaUV1[0] * deltaPos2[2]))
+                    for i in vertex_order:
+                        for x in faceVertices[i]:
+                            vertices.append(x)
+                        for x in faceTextures[i]:
+                            vertices.append(x)
+                        for x in faceNormals[i]:
+                            vertices.append(x)
+                        for x in tangent:
+                            vertices.append(x)
+                        for x in bitangent:
+                            vertices.append(x)
                 line = f.readline()
-
-        # Now we use the face data to setup the vertex ordering
-
-        hasNormals = len(vn) > 0
-        hasTextureCoords = len(vt) > 0
-
-        if not hasNormals:
-            warnings.warn("WARNING: Model has no normals. Will attempt to calculate them manually.")
-
-        if not hasTextureCoords:
-            warnings.warn("WARNING: Model has no texture coordinates.")
-
-        for face in faces:
-            # get the individual vertices for each line
-            line = face.split()
-            faceVertices = []
-            faceTextures = []
-            faceNormals = []
-
-            if not hasNormals:
-                cNorms = self.calcNormals(line, v, hasTextureCoords)
-
-            for i in range(len(line)):
-                # break out into [v,vt,vn],
-                # correct for 0 based indexing.
-                l = line[i].split("/")
-                position = int(l[0]) - 1
-                faceVertices.append(v[position])
-                if hasTextureCoords:
-                    texture = int(l[1]) - 1
-                    faceTextures.append(vt[texture])
-                else:
-                    faceTextures.append([0.0, 0.0])  # UV Coordinate of (0,0)
-
-                if hasNormals:
-                    normal = int(l[2]) - 1
-                    faceNormals.append(vn[normal])
-                else:
-                    faceNormals.append(cNorms)
-
-            # obj file uses triangle fan format for each face individually.
-            # unpack each face
-            triangles_in_face = len(line) - 2
-
-            vertex_order = []
-            """
-                eg. 0,1,2,3 unpacks to vertices: [0,1,2,0,2,3]
-            """
-            for i in range(triangles_in_face):
-                vertex_order.append(0)
-                vertex_order.append(i + 1)
-                vertex_order.append(i + 2)
-            for i in vertex_order:
-                for x in faceVertices[i]:
-                    vertices.append(x)
-                for x in faceTextures[i]:
-                    vertices.append(x)
-                for x in faceNormals[i]:
-                    vertices.append(x)
-
         return vertices
 
     def calcNormals(self, face, vertices, hasTexCoords):

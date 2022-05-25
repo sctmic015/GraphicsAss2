@@ -9,7 +9,7 @@ def main():
 			filename = sys.argv[1]
 			print(filename)
 	except:
-		filename = "sphere.obj"
+		filename = "cube.obj"
 		print(filename)
 
 	window = OpenGLWindow()
