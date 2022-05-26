@@ -108,7 +108,7 @@ class OpenGLWindow:
         return shader
 
     # Initialise
-    def initGL(self, screen_width=810, screen_height=540, objectname="suzanne.obj"):
+    def initGL(self, screen_width=810, screen_height=540, objectname="suzanne.obj", diffuseMap = "brickwall.jpg" , normalMap = "brickwall_normal.jpg"):
         # Initialise Scene. Has to be here in order for us to reset the scene
         #self.scene = Scene()
         pg.init()
@@ -136,8 +136,8 @@ class OpenGLWindow:
         # glUniform3f(colorLoc, 1.0, 1.0, 1.0)
 
 
-        self.wood_texture = Material("brickwall.jpg", "brickwall_normal.jpg")
-        self.wood_texture.use()
+        self.texture = Material("resources/" + diffuseMap, "resources/" + normalMap)
+        self.texture.use()
 
 
         glUniform1i(
@@ -192,34 +192,50 @@ class OpenGLWindow:
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)   # Colour buffer stores all pixels on screen. Colours stored in colour buffer bit
         glUseProgram(self.shader)  # You may not need this line
 
-        theta_copy = math.radians(self.CameraTheta)
-        radius = 9
-        camx = math.sin(theta_copy) * radius
-        camz = math.cos(theta_copy) * radius
-
         if rotateCam:
+            theta_copy = math.radians(self.CameraTheta)
+            radius = 9
+            camx = math.sin(theta_copy) * radius
+            camz = math.cos(theta_copy) * radius
             self.CameraTheta += 0.3
+            view_transform = pyrr.matrix44.create_look_at(
+                eye=np.array([camx, 0, camz], dtype=np.float32),  # Position as eye
+                target=np.array([0,0,0], dtype=np.float32),  # Where are looking to
+                up=np.array([0,1,0], dtype=np.float32)  # Pass up for some reason
+            )
 
-        view_transform = pyrr.matrix44.create_look_at(
-            eye=np.array([camx, 0, camz], dtype=np.float32),  # Position as eye
-            target=np.array([0,0,0], dtype=np.float32),  # Where are looking to
-            up=np.array([0,1,0], dtype=np.float32)  # Pass up for some reason
-        )
-
+        else:
+            view_transform = pyrr.matrix44.create_look_at(
+                eye=np.array([0, 0, 9], dtype=np.float32),  # Position as eye
+                target=np.array([0, 0, 0], dtype=np.float32),  # Where are looking to
+                up=np.array([0, 1, 0], dtype=np.float32)  # Pass up for some reason
+            )
 
         glUniformMatrix4fv(self.viewMatrixLocation, 1, GL_FALSE, view_transform)
 
         if rotateLights:
-            lightThetaCopy = math.radians(self.lightTheta)
-            lightx = math.sin(lightThetaCopy) * 3
-            lightz = math.cos(lightThetaCopy) * 3
+            lightTheta1 = math.radians(self.lightTheta + 45)
+            lightx = math.sin(lightTheta1) * 4.242640687
+            lightz = math.cos(lightTheta1) * 4.242640687
             self.scene.light1.position = np.array([lightx, 3, lightz], dtype=np.float32)
 
-            camx = math.sin(lightThetaCopy - math.radians(120)) * 3
-            camz = math.cos(lightThetaCopy - math.radians(120)) * 3
+            lightTheta2 = math.radians(self.lightTheta - 45)
+            camx = math.sin(lightTheta2) * 4.242640687
+            camz = math.cos(lightTheta2) * 4.242640687
             self.scene.light2.position = np.array([camx, 3, camz], dtype=np.float32)
 
             self.lightTheta += 0.3
+
+        else:
+            lightTheta1 = math.radians(self.lightTheta + 45)
+            lightx = math.sin(lightTheta1) * 4.242640687
+            lightz = math.cos(lightTheta1) * 4.242640687
+            self.scene.light1.position = np.array([lightx, 3, lightz], dtype=np.float32)
+
+            lightTheta2 = math.radians(self.lightTheta - 45)
+            camx = math.sin(lightTheta2) * 4.242640687
+            camz = math.cos(lightTheta2) * 4.242640687
+            self.scene.light2.position = np.array([camx, 3, camz], dtype=np.float32)
 
         glUniform3fv(self.light1Location["position"], 1, self.scene.light1.position)
         glUniform3fv(self.light1Location["color"], 1, self.scene.light1.color)
